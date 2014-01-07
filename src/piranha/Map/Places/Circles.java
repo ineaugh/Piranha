@@ -24,8 +24,10 @@
 
 package piranha.Map.Places;
 
+import java.awt.Dimension;
 import java.awt.Point;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import piranha.Map.Generators.Maze;
@@ -38,21 +40,21 @@ import piranha.Map.Map;
  *
  * @author ineaugh
  */
-public class Circles extends Map
+public class Circles extends PlaceBase
 {
-  List<Point> specialPoints = new ArrayList<>();
-  
-  public Circles()
+  public Maze Initialize(Dimension size, Random rand, List<Point> wantedSpecialPoints)
   {
-    super(500, 100);
-  }
-
-  public Maze Initialize(Random rand)
-  {
+    super.Initialize(size);
     Maze maze = new Maze(GetWidth(), GetHeight());
     List<Point> bases = new ArrayList<>();
-    GenCircles(maze, rand, 50, 3, 10, true, bases);
-    GenCircles(maze, rand, 10, 10, 15, false);
+    int area = GetWidth() * GetHeight();
+    GenCircles(maze, rand, area / 1000, 3, 10, true, bases);
+    GenCircles(maze, rand, area / 5000, 10, 15, false);
+    for(Point p : wantedSpecialPoints)
+      GenCircle(maze, p.x, p.y, rand, 3, 10, true);
+    
+    bases.addAll(wantedSpecialPoints);
+    
     maze.AddBorder(false);
     Passage.MakeReachable(maze, new Simple.StraightPassageMaker()); 
     Utils.SetBinaryMap(maze, this);
@@ -62,11 +64,6 @@ public class Circles extends Map
         specialPoints.add(p);
     
     return maze;
-  }
-
-  public List<Point> GetSpecialPoints()
-  {
-    return specialPoints;
   }
   
   public static void GenCircles(Maze maze, Random rand, int numCircles, int fromRadius, int toRadius, boolean value)
@@ -79,9 +76,14 @@ public class Circles extends Map
     for(int i = 0; i < numCircles; ++i)
     {
       int x = rand.nextInt(maze.GetWidth()), y = rand.nextInt(maze.GetHeight());
-      maze.AddCircle(x, y, rand.nextInt(toRadius - fromRadius + 1) + fromRadius, value);
+      GenCircle(maze, x, y, rand, fromRadius, toRadius, value);
       if(centers != null)
         centers.add(new Point(x, y));
     }
   }   
+
+  static void GenCircle(Maze maze, int x, int y, Random rand, int fromRadius, int toRadius, boolean value)
+  {
+    maze.AddCircle(x, y, rand.nextInt(toRadius - fromRadius + 1) + fromRadius, value);
+  }
 }

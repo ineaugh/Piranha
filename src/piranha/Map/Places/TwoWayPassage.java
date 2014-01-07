@@ -22,37 +22,34 @@
  * THE SOFTWARE.
  */
 
-package piranha.Map;
+package piranha.Map.Places;
 
-import java.awt.Dimension;
 import java.awt.Point;
+import piranha.Map.Map;
 
 /**
  *
  * @author ineaugh
  */
-public class Map
+public class TwoWayPassage extends Passage
 {
-  Cell grid[][] = null;
+  Map departure;
+  Point departurePoint;
   
-  public Cell GetCell(int x, int y) { return grid[x][y]; }
-  public Cell GetCell(Point p) { return grid[p.x][p.y]; }
-  
-  public int GetWidth() { return grid.length; } 
-  public int GetHeight() { return grid[0].length; }
-  
-  public void Initialize(Dimension dim)
+  public TwoWayPassage(char symbol, String actionName, Map destination, Point destinationPoint, Map departure, Point departurePoint)
   {
-    Initialize(dim.width, dim.height);
+    super(symbol, actionName, destination, destinationPoint);
+    this.departure = departure;
+    this.departurePoint = new Point(departurePoint);
   }
-          
-  public void Initialize(int width, int height)
+
+  public Map GetDeparture()
   {
-    grid = new Cell[width][height];
-    for(int x = 0; x < width; ++x)    
-      for(int y = 0; y < height; ++y)
-        grid[x][y] = new Cell();
+    return departure;
   }
-  
-  public boolean IsInitialized() { return grid != null; }
+
+  public Point GetDeparturePoint()
+  {
+    return departurePoint;
+  }
 }

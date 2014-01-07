@@ -22,37 +22,34 @@
  * THE SOFTWARE.
  */
 
-package piranha.Map;
+package piranha.Map.Places;
 
-import java.awt.Dimension;
 import java.awt.Point;
+import piranha.Map.CellType;
+import piranha.Map.Map;
+import piranha.Map.Movable;
 
 /**
  *
  * @author ineaugh
  */
-public class Map
+public class Passage extends CellType implements ITrigger
 {
-  Cell grid[][] = null;
+  String actionName;
+  Map destination;
+  Point destinationPoint;
   
-  public Cell GetCell(int x, int y) { return grid[x][y]; }
-  public Cell GetCell(Point p) { return grid[p.x][p.y]; }
-  
-  public int GetWidth() { return grid.length; } 
-  public int GetHeight() { return grid[0].length; }
-  
-  public void Initialize(Dimension dim)
+  public Passage(char symbol, String actionName, Map destination, Point destinationPoint)
   {
-    Initialize(dim.width, dim.height);
+    super(symbol, false);
+    this.actionName = actionName;
+    this.destination = destination;
+    this.destinationPoint = new Point(destinationPoint);
   }
-          
-  public void Initialize(int width, int height)
+
+  @Override
+  public void Activated(Movable byWhom)
   {
-    grid = new Cell[width][height];
-    for(int x = 0; x < width; ++x)    
-      for(int y = 0; y < height; ++y)
-        grid[x][y] = new Cell();
+    byWhom.MoveToMap(destination, destinationPoint);
   }
-  
-  public boolean IsInitialized() { return grid != null; }
 }

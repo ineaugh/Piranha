@@ -28,6 +28,7 @@ import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
 import piranha.Map.Map;
+import squidpony.squidgrid.util.Direction;
 
 /**
  *
@@ -37,7 +38,8 @@ public class Utils
 {
   public static Map MakeBinaryMap(Maze pass)
   {
-    Map map = new Map(pass.GetWidth(), pass.GetHeight());
+    Map map = new Map();
+    map.Initialize(pass.GetWidth(), pass.GetHeight());
     SetBinaryMap(pass, map);
     return map;    
   }
@@ -49,4 +51,6 @@ public class Utils
         if(!pass.Get(x, y))
           map.GetCell(x, y).ChangeType(StandardCellTypes.Wall);
   }
+  
+  public static Direction ClockwiseDirs[] = { Direction.UP, Direction.UP_RIGHT, Direction.RIGHT, Direction.DOWN_RIGHT, Direction.DOWN, Direction.DOWN_LEFT, Direction.LEFT, Direction.UP_LEFT };
 }

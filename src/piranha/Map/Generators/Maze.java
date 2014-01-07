@@ -24,9 +24,14 @@
 
 package piranha.Map.Generators;
 
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.procedure.TIntLongProcedure;
+import java.awt.Dimension;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
+import squidpony.squidgrid.util.Direction;
 
 /**
  *
@@ -35,6 +40,11 @@ import java.util.List;
 public class Maze
 {
   boolean passability[][];
+  
+  public Maze(Dimension size)
+  {
+    this(size.width, size.height);
+  }
   
   public Maze(int width, int height)
   {
@@ -52,6 +62,13 @@ public class Maze
   public boolean Get(Point p) { return passability[p.x][p.y]; }
   public void Set(int x, int y, boolean passable) { passability[x][y] = passable; }
   public void Set(Point p, boolean passable) { passability[p.x][p.y] = passable; }
+  public boolean GetSafe(int x, int y) { return IsIn(x, y) && passability[x][y]; }
+  public boolean IsIn(int x, int y) { return x >= 0 && x < GetWidth() && y >= 0 && y < GetHeight(); }
+  public void SetSafe(int x, int y, boolean passable)
+  {
+    if(IsIn(x, y))
+      passability[x][y] = passable;
+  } 
   
   public PointSet GetFreeCells()
   {
@@ -138,11 +155,7 @@ public class Maze
         passability[x][y] = !(x % square == 0 || y % square == 0 || (x / square + y / square) % 2 == 0); 
   }  
   
-  void Set1(int x, int y, boolean value)
-  {
-    if(x >= 0 && y >= 0 && x < GetWidth() && y < GetHeight())
-      passability[x][y] = value;
-  } 
+
   
   void SetHorizontalLine(int x0, int x1, int y, boolean value)
   {
@@ -154,7 +167,7 @@ public class Maze
     }
     
     for(; x0 <= x1; ++x0)
-      Set1(x0, y, value);
+      SetSafe(x0, y, value);
   }  
   
   void Set8(int ox, int oy, int x, int y, boolean value)
@@ -201,5 +214,70 @@ public class Maze
       passability[0][y] = value;    
       passability[GetWidth() - 1][y] = value;    
     }
-  }   
+  }
+  
+  long CoordToLong(int x, int y) { return (long)x | (((long)y) << Integer.SIZE); }
+  void LongToCoord(long c, Point p)
+  {
+    p.x = (int)(c & ((((long) 1) << (Integer.SIZE + 1)) - 1));
+    p.y = (int)(c >> Integer.SIZE);
+  }
+  
+  
+  public void FillDistances(Point from, float[][] distances)
+  {
+    int width = passability.length, height = passability[0].length;
+    
+    for(int x = 0; x < width; ++x)    
+      for(int y = 0; y < height; ++y)
+        distances[x][y] = Float.POSITIVE_INFINITY;
+    
+    if(!passability[from.x][from.y])
+      return;
+    
+    distances[from.x][from.y] = 0;
+    TLongArrayList visited = new TLongArrayList(), justVisited = new TLongArrayList();
+    TIntArrayList visitedDir = new TIntArrayList(), justVisitedDir = new TIntArrayList();
+
+    for(int i = 0; i < Utils.ClockwiseDirs.length; ++i)
+      VisitPoint(from, distances, visited, visitedDir, i);
+    
+    Point p = new Point();
+    while(!visited.isEmpty())
+    {
+      for(int i = 0; i < visited.size(); ++i)
+      {
+        LongToCoord(visited.getQuick(i), p);
+        int di = visitedDir.getQuick(i);
+        VisitPoint(p, distances, justVisited, justVisitedDir, di);
+        VisitPoint(p, distances, justVisited, justVisitedDir, (di + 1) % Utils.ClockwiseDirs.length);
+        VisitPoint(p, distances, justVisited, justVisitedDir, (di - 1 + Utils.ClockwiseDirs.length) % Utils.ClockwiseDirs.length);
+        if(di % 2 == 1)
+        {
+          VisitPoint(p, distances, justVisited, justVisitedDir, (di + 2) % Utils.ClockwiseDirs.length);
+          VisitPoint(p, distances, justVisited, justVisitedDir, (di - 2 + Utils.ClockwiseDirs.length) % Utils.ClockwiseDirs.length);
+        }
+      }
+      
+      TLongArrayList jv = justVisited;
+      TIntArrayList jvd = justVisitedDir;
+      justVisited = visited;
+      justVisitedDir = visitedDir;
+      visited = jv;
+      visitedDir = jvd;
+      justVisited.resetQuick();
+      justVisitedDir.resetQuick();
+    }
+  }
+
+  void VisitPoint(Point from, float[][] distances, TLongArrayList visited, TIntArrayList visitedDir, int i)
+  {
+    Direction d = Utils.ClockwiseDirs[i];          
+    if(GetSafe(from.x + d.deltaX, from.y + d.deltaY) && distances[from.x + d.deltaX][from.y + d.deltaY] == Float.POSITIVE_INFINITY)
+    {
+      distances[from.x + d.deltaX][from.y + d.deltaY] = distances[from.x][from.y] + 1;
+      visited.add(CoordToLong(from.x + d.deltaX, from.y + d.deltaY));
+      visitedDir.add(i);
+    }
+  }
 }

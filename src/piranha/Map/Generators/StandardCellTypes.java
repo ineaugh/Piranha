@@ -35,4 +35,6 @@ public class StandardCellTypes
   public static CellType Wall = new CellType('█', true);
   public static CellType Mark = new CellType('∙', false);
   public static CellType Mark2 = new CellType('○', false);
+  public static CellType PassageDown = new CellType('▼', false);
+  public static CellType PassageUp = new CellType('▲', false);
 }

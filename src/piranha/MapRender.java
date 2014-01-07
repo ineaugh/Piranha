@@ -56,7 +56,6 @@ public class MapRender
   Movable character;
   FOVSolver fovSolver;
   Random flickerRand = new Random();
-  boolean[][] seen;
   
   public MapRender(Map map, Movable character, SGPane terminal, Rectangle view)
   {
@@ -65,11 +64,10 @@ public class MapRender
     this.view = new Rectangle(view);
     this.character = character;
     obstacles = new float[map.GetWidth()][map.GetHeight()];
-    seen = new boolean[map.GetWidth()][map.GetHeight()];
     fovSolver = new ShadowFOV();
   }
   
-  public void Render()
+  public void Render(boolean seenAll)
   {
     for(int x = 0; x < map.GetWidth(); ++x)
       for(int y = 0; y < map.GetHeight(); ++y)
@@ -83,29 +81,27 @@ public class MapRender
     
     for(int x = 0; x < view.width; ++x)    
       for(int y = 0; y < view.height; ++y)
-        if(view.x + x < map.GetWidth() && view.y + y < map.GetHeight())
+      {
+        int vx = view.x + x, vy = view.y + y;
+        if(vx < map.GetWidth() && vy < map.GetHeight() && y < terminal.getGridHeight() && x < terminal.getGridWidth())
         {
-          int vx = view.x + x, vy = view.y + y;
           Cell c = map.GetCell(vx, vy);
           CellType t = c.GetType();
           if(!c.GetMovables().isEmpty())
             t = c.GetMovables().iterator().next().GetType();
-          
-          if(y < terminal.getGridHeight() && x < terminal.getGridWidth())
-          {
-            float vis = visibility[vx][vy];
-            if(vis > 0)
-              seen[vx][vy] = true;
-            
-            if(seen[vx][vy])
-              vis = Math.max(0.3f, vis);
-            
-            terminal.placeCharacter(x, y, t.GetSymbol(), 
-                      Color.getHSBColor(0, 0, vis), 
-                      Color.getHSBColor(0, 0, 0.2f * (1 + flickerRand.nextFloat() * 0.05f) * vis));
-          }
-            //terminal.set(y, x, String.valueOf(t.GetSymbol()), null, null);
+
+          float vis = visibility[vx][vy];
+          if(vis > 0)
+            c.SetSeen(true);
+
+          if(c.IsSeen() || seenAll)
+            vis = Math.max(0.3f, vis);
+
+          terminal.placeCharacter(x, y, t.GetSymbol(), 
+                    Color.getHSBColor(0, 0, vis), 
+                    Color.getHSBColor(0, 0, 0.2f * (1 + flickerRand.nextFloat() * 0.05f) * vis));
         }
+      }
   }
   
   static float ClampColor(float c)
@@ -130,4 +126,9 @@ public class MapRender
   {
      view.y = Math.max(0, Math.min(map.GetHeight() - view.height, view.y + shift));
   }  
+
+  public void SwitchMap(Map map)
+  {
+    this.map = map;
+  }
 }

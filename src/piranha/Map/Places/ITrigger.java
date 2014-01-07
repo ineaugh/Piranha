@@ -22,37 +22,15 @@
  * THE SOFTWARE.
  */
 
-package piranha.Map;
+package piranha.Map.Places;
 
-import java.awt.Dimension;
-import java.awt.Point;
+import piranha.Map.Movable;
 
 /**
  *
  * @author ineaugh
  */
-public class Map
+public interface ITrigger
 {
-  Cell grid[][] = null;
-  
-  public Cell GetCell(int x, int y) { return grid[x][y]; }
-  public Cell GetCell(Point p) { return grid[p.x][p.y]; }
-  
-  public int GetWidth() { return grid.length; } 
-  public int GetHeight() { return grid[0].length; }
-  
-  public void Initialize(Dimension dim)
-  {
-    Initialize(dim.width, dim.height);
-  }
-          
-  public void Initialize(int width, int height)
-  {
-    grid = new Cell[width][height];
-    for(int x = 0; x < width; ++x)    
-      for(int y = 0; y < height; ++y)
-        grid[x][y] = new Cell();
-  }
-  
-  public boolean IsInitialized() { return grid != null; }
+  void Activated(Movable byWhom);
 }

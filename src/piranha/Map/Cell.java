@@ -33,7 +33,8 @@ import java.util.HashSet;
 public class Cell
 {
   CellType type = CellType.Empty;
-  HashSet<Movable> movables  = new HashSet<>();
+  HashSet<Movable> movables = new HashSet<>();
+  boolean seen = false;
 
   public HashSet<Movable> GetMovables()
   {
@@ -60,5 +61,15 @@ public class Cell
         return true;
     
     return false;     
+  }
+
+  public boolean IsSeen()
+  {
+    return seen;
+  }
+
+  public void SetSeen(boolean seen)
+  {
+    this.seen = seen;
   }
 }

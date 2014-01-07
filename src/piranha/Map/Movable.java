@@ -73,4 +73,12 @@ public class Movable
   {
     return type;
   }
+
+  public void MoveToMap(Map map, Point newPos)
+  {
+    map.GetCell(coordinate).movables.remove(this);     
+    this.map = map;
+    coordinate.setLocation(newPos);
+    map.GetCell(coordinate).movables.add(this);    
+  }
 }

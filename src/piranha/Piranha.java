@@ -24,6 +24,7 @@
 
 package piranha;
 
+import java.awt.Color;
 import piranha.Map.Map;
 import piranha.Map.CellType;
 import java.awt.Dimension;
@@ -38,13 +39,17 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
+import java.lang.reflect.Constructor;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFrame;
+import piranha.Map.Cell;
 import piranha.Map.Generators.LineSegment;
 import piranha.Map.Generators.Maze;
 import piranha.Map.Generators.Passage;
@@ -72,10 +77,13 @@ public class Piranha implements KeyListener, MouseListener, MouseMotionListener
   JFrame frame = new JFrame("Tower of Piranha");
   Random rand = new Random();
   Point dragFrom = new Point();
+  int keyModifiers = 0;
 
   MapRender render;
   Movable character;
   Circles map;
+  
+  Maze maze;
   
   public Piranha()
   {
@@ -96,7 +104,10 @@ public class Piranha implements KeyListener, MouseListener, MouseMotionListener
   {   
     CellType characterType = new CellType('@', true);   
     map = new Circles();
-    Maze maze = map.Initialize(rand);
+    maze = map.Initialize(new Dimension(50, 100), rand);
+    
+    for(Point p : map.GetSpecialPoints())
+      map.GetCell(p).ChangeType(StandardCellTypes.Mark);
     
     character = new Movable(characterType, map);
     List<Point> freePlaces = new ArrayList<>();
@@ -105,25 +116,27 @@ public class Piranha implements KeyListener, MouseListener, MouseMotionListener
       
     character.Teleport(freePlaces.get(rand.nextInt(freePlaces.size())));
     
-    for(Point p : map.GetSpecialPoints())
-      map.GetCell(p).ChangeType(StandardCellTypes.Mark);
+    float distances[][] = new float[maze.GetWidth()][maze.GetHeight()];
+    maze.FillDistances(character.GetCoordinate(), distances);
     
-    render = new MapRender(map, character, terminal, new Rectangle(terminal.getGridWidth(), terminal.getGridHeight()));
+    Point farSpecial = map.GetSpecialPoints().get(0);
+    for(Point p : map.GetSpecialPoints())
+      if(distances[p.x][p.y] > distances[farSpecial.x][farSpecial.y])
+        farSpecial = p;
+    
+    map.GetCell(farSpecial).ChangeType(StandardCellTypes.PassageUp);
+    
+    render = new MapRender(map, character, terminal, new Rectangle(terminal.getGridWidth(), terminal.getGridHeight() - 1));
     render.ShiftX(character.GetCoordinate().x - terminal.getGridWidth() / 2);
     render.ShiftY(character.GetCoordinate().y - terminal.getGridHeight() / 2);
     
-    Draw();
+    UpdateScreen();
     
     frame.addKeyListener(this);
     terminal.addMouseListener(this);
     terminal.addMouseMotionListener(this);    
   }
   
-  void Draw()
-  {
-    render.Render();
-    terminal.refresh();
-  }
   /**
    * @param args the command line arguments
    */
@@ -137,40 +150,31 @@ public class Piranha implements KeyListener, MouseListener, MouseMotionListener
   public void keyTyped(KeyEvent ke)
   {
   }
+  
+  static int directionKeys[][] = {
+    {KeyEvent.VK_W, KeyEvent.VK_NUMPAD8, KeyEvent.VK_UP},
+    {KeyEvent.VK_E, KeyEvent.VK_NUMPAD9}, 
+    {KeyEvent.VK_D, KeyEvent.VK_NUMPAD6, KeyEvent.VK_RIGHT},
+    {KeyEvent.VK_C, KeyEvent.VK_NUMPAD3},
+    {KeyEvent.VK_X, KeyEvent.VK_S, KeyEvent.VK_NUMPAD2, KeyEvent.VK_DOWN},
+    {KeyEvent.VK_Z, KeyEvent.VK_NUMPAD1},
+    {KeyEvent.VK_A, KeyEvent.VK_NUMPAD4, KeyEvent.VK_LEFT},
+    {KeyEvent.VK_Q, KeyEvent.VK_NUMPAD7}};  
 
   @Override
   public void keyPressed(KeyEvent ke)
   {
+    keyModifiers = ke.getModifiers();
     //System.err.println("Key pressed");
     int code = ke.getKeyCode();
     if(code == KeyEvent.VK_ESCAPE)
       frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
    
     Direction dir = Direction.NONE;
-    
-    if(code == KeyEvent.VK_W || code == KeyEvent.VK_NUMPAD8 || code == KeyEvent.VK_UP)
-      dir = Direction.UP;
-    
-    if(code == KeyEvent.VK_E || code == KeyEvent.VK_NUMPAD9)
-      dir = Direction.UP_RIGHT;
-    
-    if(code == KeyEvent.VK_D || code == KeyEvent.VK_NUMPAD6 || code == KeyEvent.VK_RIGHT)
-      dir = Direction.RIGHT; 
-    
-    if(code == KeyEvent.VK_C || code == KeyEvent.VK_NUMPAD3)
-      dir = Direction.DOWN_RIGHT;    
-    
-    if(code == KeyEvent.VK_X || code == KeyEvent.VK_S || code == KeyEvent.VK_NUMPAD2 || code == KeyEvent.VK_DOWN)
-      dir = Direction.DOWN; 
-    
-    if(code == KeyEvent.VK_Z || code == KeyEvent.VK_NUMPAD1)
-      dir = Direction.DOWN_LEFT; 
-    
-    if(code == KeyEvent.VK_A || code == KeyEvent.VK_NUMPAD4 || code == KeyEvent.VK_LEFT)
-      dir = Direction.LEFT; 
-    
-    if(code == KeyEvent.VK_Q || code == KeyEvent.VK_NUMPAD7)
-      dir = Direction.UP_LEFT;    
+    for(int i = 0; i < Utils.ClockwiseDirs.length; ++i)
+      for(int j = 0; j < directionKeys[i].length; ++j)
+        if(code == directionKeys[i][j])
+          dir = Utils.ClockwiseDirs[i];
     
     Point pos = character.GetCoordinate();
     
@@ -203,14 +207,51 @@ public class Piranha implements KeyListener, MouseListener, MouseMotionListener
 
       character.Shift(dir);
     }    
+    
+    if(code == KeyEvent.VK_ENTER)
+      if(map.GetCell(pos).GetType() == StandardCellTypes.PassageUp)
+      {      
+        map = new Circles();
+        maze = map.Initialize(new Dimension(50, 100), rand, pos);
+
+        for(Point p : map.GetSpecialPoints())
+          map.GetCell(p).ChangeType(StandardCellTypes.Mark);
+        
+        map.GetCell(pos).ChangeType(StandardCellTypes.PassageDown);
+
+        float distances[][] = new float[maze.GetWidth()][maze.GetHeight()];
+        maze.FillDistances(pos, distances);
+
+        Point farSpecial = map.GetSpecialPoints().get(0);
+        for(Point p : map.GetSpecialPoints())
+          if(distances[p.x][p.y] > distances[farSpecial.x][farSpecial.y])
+            farSpecial = p;
+
+        map.GetCell(farSpecial).ChangeType(StandardCellTypes.PassageUp);  
+        
+        render.SwitchMap(map);
+        character.MoveToMap(map, pos);
+      }
+    
     UpdateScreen();    
   }    
 
   private void UpdateScreen()
   {
     long start = System.nanoTime();
-    render.Render();
+    render.Render((keyModifiers & KeyEvent.CTRL_MASK) != 0);
+    String status = String.format("At %d:%d.", character.GetCoordinate().x, character.GetCoordinate().y);
+    if(map.GetCell(character.GetCoordinate()).GetType() == StandardCellTypes.PassageDown)
+      status = status.concat(" [Enter]: descend.");
+    else if(map.GetCell(character.GetCoordinate()).GetType() == StandardCellTypes.PassageUp)
+      status = status.concat(" [Enter]: ascend.");    
+    
+    while(status.length() < terminal.getGridWidth())
+      status = status.concat(" ");
+    
+    terminal.placeHorizontalString(0, terminal.getGridHeight() - 1, status);
     terminal.refresh();
+
     //frame.repaint();
     System.out.format("Update time: %d ms\n", (System.nanoTime() - start) / 1000000);    
   }
@@ -218,6 +259,8 @@ public class Piranha implements KeyListener, MouseListener, MouseMotionListener
   @Override
   public void keyReleased(KeyEvent ke)
   {
+    keyModifiers = ke.getModifiers(); 
+    UpdateScreen();
   }
 
   @Override

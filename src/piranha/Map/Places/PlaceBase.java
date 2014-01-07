@@ -22,37 +22,39 @@
  * THE SOFTWARE.
  */
 
-package piranha.Map;
+package piranha.Map.Places;
 
 import java.awt.Dimension;
 import java.awt.Point;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import piranha.Map.Generators.Maze;
+import piranha.Map.Map;
 
 /**
  *
  * @author ineaugh
  */
-public class Map
+public abstract class PlaceBase extends Map
 {
-  Cell grid[][] = null;
-  
-  public Cell GetCell(int x, int y) { return grid[x][y]; }
-  public Cell GetCell(Point p) { return grid[p.x][p.y]; }
-  
-  public int GetWidth() { return grid.length; } 
-  public int GetHeight() { return grid[0].length; }
-  
-  public void Initialize(Dimension dim)
+  protected List<Point> specialPoints = new ArrayList<>();
+
+  public Maze Initialize(Dimension size, Random rand)
   {
-    Initialize(dim.width, dim.height);
+    return Initialize(size, rand, new ArrayList<Point>());
   }
-          
-  public void Initialize(int width, int height)
+
+  public Maze Initialize(Dimension size, Random rand, Point... p)
   {
-    grid = new Cell[width][height];
-    for(int x = 0; x < width; ++x)    
-      for(int y = 0; y < height; ++y)
-        grid[x][y] = new Cell();
+    return Initialize(size, rand, Arrays.asList(p));
   }
-  
-  public boolean IsInitialized() { return grid != null; }
+
+  public abstract Maze Initialize(Dimension size, Random rand, List<Point> wantedSpecialPoints);
+
+  public List<Point> GetSpecialPoints()
+  {
+    return specialPoints;
+  }
 }
